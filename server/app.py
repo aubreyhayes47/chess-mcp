@@ -8,6 +8,8 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ResourceError
 from mcp.server.lowlevel.helper_types import ReadResourceContents
 
+from tools import register_tools
+
 WIDGET_URI = "ui://widget/chess-board-v1.html"
 WIDGET_MIME_TYPE = "text/html+skybridge"
 WIDGET_DOMAIN = "https://chess-mcp.example.com"
@@ -17,6 +19,7 @@ WIDGET_CSP = {
 }
 
 app = FastMCP("chess-mcp")
+register_tools(app)
 
 
 @app.resource(WIDGET_URI, mime_type=WIDGET_MIME_TYPE)
@@ -46,9 +49,6 @@ async def read_resource(uri: str):
             meta=meta,
         )
     ]
-
-
-# TODO: Register tools in tools.py with MCP metadata (Task 2+).
 
 if __name__ == "__main__":
     # TODO: Replace with proper ASGI server invocation for production.
