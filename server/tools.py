@@ -9,9 +9,10 @@ import chess
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
 
-from chess_rules import apply_uci_move, legal_moves_uci
+from chess_rules import apply_uci_move, legal_moves_uci, opponent_move_candidates
 
 WIDGET_TEMPLATE_URI = "ui://widget/chess-board-v1.html"
+OPPONENT_MOVE_CAP = 200
 
 
 def _tool_meta(widget_accessible: bool) -> dict[str, object]:
@@ -96,12 +97,21 @@ def register_tools(app: FastMCP) -> None:
         meta=_tool_meta(widget_accessible=True),
     )
     def choose_opponent_move(fen: str) -> ToolResult:
+        moves = opponent_move_candidates(fen, limit=OPPONENT_MOVE_CAP)
+        content = []
+        if not moves:
+            content = [
+                {
+                    "type": "text",
+                    "text": "No legal moves available; the game is over.",
+                }
+            ]
         payload = {
             "type": "opponent_choice",
-            "movesUci": legal_moves_uci(fen),
+            "movesUci": moves,
             "policy": {
                 "mustChooseFromMovesUci": True,
                 "chooseExactlyOne": True,
             },
         }
-        return ToolResult(content=[], structured_content=payload)
+        return ToolResult(content=content, structured_content=payload)

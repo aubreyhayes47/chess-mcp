@@ -5,7 +5,12 @@ import chess
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from chess_rules import apply_uci_move, legal_moves_uci  # noqa: E402
+from chess_rules import (  # noqa: E402
+    apply_uci_move,
+    legal_moves_uci,
+    opponent_move_candidates,
+    revalidate_opponent_choice,
+)
 
 
 def test_apply_uci_move_normal():
@@ -55,3 +60,20 @@ def test_apply_uci_move_checkmate():
 def test_legal_moves_uci_starting_position():
     moves = legal_moves_uci(chess.STARTING_FEN)
     assert moves
+
+
+def test_choose_opponent_move_candidates_are_legal():
+    candidates = opponent_move_candidates(chess.STARTING_FEN)
+    legal = set(legal_moves_uci(chess.STARTING_FEN))
+    assert candidates
+    assert set(candidates).issubset(legal)
+
+
+def test_revalidate_opponent_choice_rejects_not_allowed():
+    fen = chess.STARTING_FEN
+    allowed = ["e2e4"]
+    ok, result = revalidate_opponent_choice(fen, "d2d4", allowed_moves=allowed)
+    assert ok is False
+    assert result["legal"] is False
+    assert result["fen"] == fen
+    assert result["error"] == "Opponent move not in allowed list"

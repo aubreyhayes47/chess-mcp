@@ -93,3 +93,60 @@ def legal_moves_uci(fen: str) -> list[str]:
         return []
 
     return [move.uci() for move in board.legal_moves]
+
+
+def opponent_move_candidates(fen: str, limit: int = 200) -> list[str]:
+    """Return a capped list of legal opponent moves in UCI notation."""
+    moves = legal_moves_uci(fen)
+    if limit > 0:
+        return moves[:limit]
+    return moves
+
+
+def _error_snapshot_from_fen(fen: str, move_uci: str, error: str) -> dict[str, Any]:
+    try:
+        board = chess.Board(fen)
+    except ValueError:
+        return {
+            "legal": False,
+            "fen": fen,
+            "san": None,
+            "uci": move_uci.lower(),
+            "turn": "w",
+            "check": False,
+            "status": "in_progress",
+            "error": error,
+        }
+
+    status, in_check = _status_from_board(board)
+    return {
+        "legal": False,
+        "fen": fen,
+        "san": None,
+        "uci": move_uci.lower(),
+        "turn": _turn_from_board(board),
+        "check": in_check,
+        "status": status,
+        "error": error,
+    }
+
+
+def revalidate_opponent_choice(
+    fen: str,
+    move_uci: str,
+    allowed_moves: list[str] | None = None,
+) -> tuple[bool, dict[str, Any]]:
+    """Revalidate an opponent-selected move using the same rules engine."""
+    result = apply_uci_move(fen, move_uci)
+    if not result["legal"]:
+        return False, result
+
+    allowed = allowed_moves if allowed_moves is not None else legal_moves_uci(fen)
+    if move_uci not in allowed:
+        return False, _error_snapshot_from_fen(
+            fen,
+            move_uci,
+            "Opponent move not in allowed list",
+        )
+
+    return True, result
