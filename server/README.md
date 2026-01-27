@@ -58,6 +58,24 @@ pip install -e .
 pytest
 ```
 
+## Opponent move constraints & revalidation
+
+The `choose_opponent_move` tool always returns a list of legal UCI moves derived
+from the current FEN. By default the server returns all legal moves and caps the
+list at 200 entries (rarely exceeded). The tool also provides a strict policy
+object that requires the model to choose exactly one UCI move from that list.
+
+When a model-selected move is applied, the server **must** revalidate it using
+the same rules engine as `apply_move`. Use
+`revalidate_opponent_choice(fen, move_uci, allowed_moves)` to enforce:
+
+- The move is legal for the provided FEN.
+- The move is present in the allowed list that was given to the model.
+
+If the selected move is not in the allowed list, the helper returns
+`legal: false` with `error: "Opponent move not in allowed list"`, and the UI or
+orchestrator should call `choose_opponent_move` again to request a valid move.
+
 ## Manual test checklist
 
 - Start the server and open MCP Inspector.
