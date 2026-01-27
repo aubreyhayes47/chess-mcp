@@ -13,6 +13,23 @@ pip install -e .
 python app.py
 ```
 
+## Widget build & serving
+
+The widget bundle is built from `web/` and inlined into the skybridge template.
+
+```bash
+cd web
+npm install
+npm run build
+```
+
+The server reads `web/dist/widget.js` and `web/dist/widget.css` at runtime and
+replaces the `/* INLINE_CSS */` and `/* INLINE_JS */` placeholders in
+`server/templates/chess-board-v1.html`.
+
+To cache-bust the widget, bump `WIDGET_VERSION` in `server/app.py` and rename the
+template file (for example `chess-board-v2.html`).
+
 ## Example tool calls
 
 Use MCP Inspector (or any MCP client) to call the tools with these sample inputs:

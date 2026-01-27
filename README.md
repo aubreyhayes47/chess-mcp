@@ -214,6 +214,7 @@ Use `useOpenAiGlobal("toolOutput")` and `useWidgetState(...)` helpers to keep re
 
 ### UI manual test checklist
 
+* Build the widget bundle: `cd web && npm install && npm run build`.
 * Start a new game (auto on load or via **New Game** button).
 * Make a legal move and confirm the board updates only after tool confirmation.
 * Attempt an illegal move and confirm an error appears with no board change.
@@ -253,9 +254,53 @@ chess-mcp/
         useOpenAiGlobal.ts
         useWidgetState.ts
     dist/
-      component.js         # bundled single-file output
+      widget.js            # bundled JS (inlined into template)
+      widget.css           # bundled CSS (inlined into template)
   README.md
 ```
+
+---
+
+## Widget build & serving (Task 6)
+
+The FastMCP server embeds the built widget bundle directly into the skybridge
+HTML template.
+
+### Build the widget
+
+```bash
+cd web
+npm install
+npm run build
+```
+
+Build output lives in `web/dist/`:
+
+* `web/dist/widget.js`
+* `web/dist/widget.css`
+
+### How the server loads the widget
+
+* `server/app.py` reads the bundle from `web/dist/`.
+* `server/templates/chess-board-v1.html` contains placeholders for inline CSS and JS:
+  * `/* INLINE_CSS */`
+  * `/* INLINE_JS */`
+* The server replaces those markers at runtime and returns a single
+  `text/html+skybridge` document with `<style>` and `<script type="module">`.
+
+### CSP configuration
+
+`openai/widgetCSP` is set by the server. The only required allowance is the
+server origin itself in `connect_domains`. Since the bundle is inlined, there
+are no external resource domains to allowlist.
+
+### Cache-busting the template URI
+
+When you make breaking widget changes, bump the version in `server/app.py`:
+
+* `WIDGET_VERSION = "v1"` → `"v2"`
+* Template file name: `server/templates/chess-board-v1.html` → `chess-board-v2.html`
+* Template URI updates automatically: `ui://widget/chess-board-v2.html`
 
 ---
 
