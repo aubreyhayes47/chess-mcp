@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+chess_mcp_server.egg-info/PKG-INFO
+chess_mcp_server.egg-info/SOURCES.txt
+chess_mcp_server.egg-info/dependency_links.txt
+chess_mcp_server.egg-info/requires.txt
+chess_mcp_server.egg-info/top_level.txt
+tests/test_chess_rules.py
