@@ -6,7 +6,15 @@
     <title>Chess MCP Widget</title>
   </head>
   <body>
-    <div id="root">Chess MCP Widget (placeholder)</div>
-    <!-- TODO: Inject bundled React widget script here. -->
+    <div id="root"></div>
+    <script type="module">
+      const root = document.getElementById("root");
+      root.textContent = "Chess widget loaded (placeholder)";
+      if (window.openai) {
+        console.log("window.openai available", window.openai);
+      } else {
+        console.log("window.openai not available");
+      }
+    </script>
   </body>
 </html>
