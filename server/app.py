@@ -8,7 +8,7 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ResourceError
 from mcp.server.lowlevel.helper_types import ReadResourceContents
 
-from tools import register_tools
+from .tools import register_tools
 
 WIDGET_URI = "ui://widget/chess-board-v1.html"
 WIDGET_MIME_TYPE = "text/html+skybridge"

@@ -1,0 +1,1 @@
+"""Chess MCP server package."""
