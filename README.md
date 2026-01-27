@@ -212,6 +212,14 @@ Atomic “player move then opponent move” to minimize round trips.
 
 Use `useOpenAiGlobal("toolOutput")` and `useWidgetState(...)` helpers to keep reactive.
 
+### UI manual test checklist
+
+* Start a new game (auto on load or via **New Game** button).
+* Make a legal move and confirm the board updates only after tool confirmation.
+* Attempt an illegal move and confirm an error appears with no board change.
+* After a legal move, confirm the opponent move appears after the loading state.
+* Reach a game end state (checkmate/stalemate/check) and confirm status renders.
+
 ---
 
 ## Turn Loop

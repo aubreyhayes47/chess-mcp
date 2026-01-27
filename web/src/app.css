@@ -3,11 +3,165 @@
   color: #1f2933;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background: #f5f7fa;
 }
 
+button {
+  font: inherit;
+}
+
 .app {
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.app__subtitle {
+  margin: 4px 0 0;
+  color: #52616b;
+}
+
+.app__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.button {
+  background: #1f7aec;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button--secondary {
+  background: #e0e7ff;
+  color: #1f2933;
+}
+
+.status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(31, 41, 51, 0.08);
+}
+
+.alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fdecea;
+  color: #611a15;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.board-wrapper {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 220px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .board-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border: 6px solid #1f2933;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1f2933;
+}
+
+.square {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(20px, 4vw, 36px);
+  cursor: pointer;
+}
+
+.square--light {
+  background: #f0d9b5;
+}
+
+.square--dark {
+  background: #b58863;
+}
+
+.square--selected {
+  outline: 3px solid #1f7aec;
+  z-index: 1;
+}
+
+.square .piece {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.square .coord {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  font-size: 10px;
+  color: rgba(31, 41, 51, 0.6);
+}
+
+.board-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: #52616b;
+}
+
+.board-note {
+  margin: 0;
 }
