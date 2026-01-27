@@ -9,7 +9,10 @@ import chess
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
 
-from .chess_rules import apply_uci_move, legal_moves_uci
+try:
+    from .chess_rules import apply_uci_move, legal_moves_uci
+except ImportError:
+    from chess_rules import apply_uci_move, legal_moves_uci
 
 WIDGET_TEMPLATE_URI = "ui://widget/chess-board-v1.html"
 
