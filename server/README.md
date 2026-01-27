@@ -14,6 +14,23 @@ pip install -e .
 python app.py
 ```
 
+## Running tests
+
+```bash
+cd server
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e .
+pytest
+```
+
+## Manual test checklist
+
+- Start the server and load the widget UI.
+- Make a legal move and confirm the board updates only after tool validation.
+- Attempt an illegal move and confirm the board does not update and an error appears.
+
 ## Notes
 
 - Tool handlers will live in `tools.py`.
