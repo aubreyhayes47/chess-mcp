@@ -9,7 +9,7 @@ import chess
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
 
-from chess_rules import apply_uci_move, legal_moves_uci
+from .chess_rules import apply_uci_move, legal_moves_uci
 
 WIDGET_TEMPLATE_URI = "ui://widget/chess-board-v1.html"
 
@@ -96,12 +96,21 @@ def register_tools(app: FastMCP) -> None:
         meta=_tool_meta(widget_accessible=True),
     )
     def choose_opponent_move(fen: str) -> ToolResult:
-        payload = {
-            "type": "opponent_choice",
-            "movesUci": legal_moves_uci(fen),
-            "policy": {
-                "mustChooseFromMovesUci": True,
-                "chooseExactlyOne": True,
-            },
-        }
+        moves = legal_moves_uci(fen)
+        if not moves:
+            # Terminal position: no legal moves available
+            payload = {
+                "type": "opponent_choice",
+                "movesUci": [],
+                "error": "No legal moves available (terminal position)",
+            }
+        else:
+            payload = {
+                "type": "opponent_choice",
+                "movesUci": moves,
+                "policy": {
+                    "mustChooseFromMovesUci": True,
+                    "chooseExactlyOne": True,
+                },
+            }
         return ToolResult(content=[], structured_content=payload)
