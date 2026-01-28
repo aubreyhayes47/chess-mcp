@@ -30,6 +30,16 @@ replaces the `/* INLINE_CSS */` and `/* INLINE_JS */` placeholders in
 To cache-bust the widget, bump `WIDGET_VERSION` in `server/app.py` and rename the
 template file (for example `chess-board-v2.html`).
 
+### CSP for local development
+
+By default, the widget CSP only allows the configured `WIDGET_DOMAIN` for
+`connect_domains`. To allow local development against
+`http://localhost:8000`, set:
+
+```bash
+export WIDGET_ALLOW_LOCALHOST=true
+```
+
 ## Example tool calls
 
 Use MCP Inspector (or any MCP client) to call the tools with these sample inputs:

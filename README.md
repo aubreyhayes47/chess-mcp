@@ -292,7 +292,9 @@ Build output lives in `web/dist/`:
 
 `openai/widgetCSP` is set by the server. The only required allowance is the
 server origin itself in `connect_domains`. Since the bundle is inlined, there
-are no external resource domains to allowlist.
+are no external resource domains to allowlist. For local development, set
+`WIDGET_ALLOW_LOCALHOST=true` to include `http://localhost:8000` in the CSP
+`connect_domains` list.
 
 ### Cache-busting the template URI
 

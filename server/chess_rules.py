@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 from typing import Any
+import re
 
 import chess
+
+
+MAX_FEN_LENGTH = 200
+UCI_PATTERN = re.compile(r"^[a-h][1-8][a-h][1-8][qrbn]?$")
 
 
 def _status_from_board(board: chess.Board) -> tuple[str, bool]:
@@ -22,40 +27,65 @@ def _turn_from_board(board: chess.Board) -> str:
     return "w" if board.turn == chess.WHITE else "b"
 
 
+def _validate_fen_string(fen: str) -> str | None:
+    if not isinstance(fen, str) or not fen.strip():
+        return "Invalid FEN: missing"
+    if len(fen) > MAX_FEN_LENGTH:
+        return "Invalid FEN: too long"
+    if any(ch in "\n\r\t" for ch in fen):
+        return "Invalid FEN: contains control characters"
+    return None
+
+
+def _normalize_uci(move_uci: str) -> str:
+    return move_uci.strip().lower()
+
+
+def _validate_uci_string(move_uci: str) -> str | None:
+    if not isinstance(move_uci, str) or not move_uci.strip():
+        return "Invalid move format"
+    normalized = _normalize_uci(move_uci)
+    if len(normalized) not in (4, 5):
+        return "Invalid move format"
+    if not UCI_PATTERN.match(normalized):
+        return "Invalid move format"
+    return None
+
+
 def apply_uci_move(fen: str, move_uci: str) -> dict[str, Any]:
     """Validate and apply a UCI move against a FEN string.
 
     Returns a dict containing move legality, resulting FEN, SAN, UCI, turn,
     check information, status, and an optional error.
     """
+    fen_error = _validate_fen_string(fen)
+    if fen_error:
+        return _error_snapshot_from_fen(fen, _normalize_uci(move_uci), fen_error)
+
     try:
         board = chess.Board(fen)
     except ValueError as exc:
-        return {
-            "legal": False,
-            "fen": fen,
-            "san": None,
-            "uci": move_uci.lower(),
-            "turn": "w",
-            "check": False,
-            "status": "in_progress",
-            "error": f"Invalid FEN: {exc}",
-        }
+        return _error_snapshot_from_fen(
+            fen,
+            _normalize_uci(move_uci),
+            f"Invalid FEN: {exc}",
+        )
 
-    try:
-        move = chess.Move.from_uci(move_uci)
-    except ValueError:
+    move_error = _validate_uci_string(move_uci)
+    if move_error:
         status, in_check = _status_from_board(board)
         return {
             "legal": False,
             "fen": fen,
             "san": None,
-            "uci": move_uci.lower(),
+            "uci": _normalize_uci(move_uci),
             "turn": _turn_from_board(board),
             "check": in_check,
             "status": status,
-            "error": "Invalid move format",
+            "error": move_error,
         }
+
+    move = chess.Move.from_uci(_normalize_uci(move_uci))
 
     if not board.is_legal(move):
         status, in_check = _status_from_board(board)
@@ -87,6 +117,9 @@ def apply_uci_move(fen: str, move_uci: str) -> dict[str, Any]:
 
 def legal_moves_uci(fen: str) -> list[str]:
     """Return legal moves in UCI notation for a given FEN."""
+    fen_error = _validate_fen_string(fen)
+    if fen_error:
+        return []
     try:
         board = chess.Board(fen)
     except ValueError:
@@ -111,7 +144,7 @@ def _error_snapshot_from_fen(fen: str, move_uci: str, error: str) -> dict[str, A
             "legal": False,
             "fen": fen,
             "san": None,
-            "uci": move_uci.lower(),
+            "uci": _normalize_uci(move_uci),
             "turn": "w",
             "check": False,
             "status": "in_progress",
@@ -123,7 +156,7 @@ def _error_snapshot_from_fen(fen: str, move_uci: str, error: str) -> dict[str, A
         "legal": False,
         "fen": fen,
         "san": None,
-        "uci": move_uci.lower(),
+        "uci": _normalize_uci(move_uci),
         "turn": _turn_from_board(board),
         "check": in_check,
         "status": status,
@@ -137,15 +170,16 @@ def revalidate_opponent_choice(
     allowed_moves: list[str] | None = None,
 ) -> tuple[bool, dict[str, Any]]:
     """Revalidate an opponent-selected move using the same rules engine."""
-    result = apply_uci_move(fen, move_uci)
+    normalized_move = _normalize_uci(move_uci)
+    result = apply_uci_move(fen, normalized_move)
     if not result["legal"]:
         return False, result
 
     allowed = allowed_moves if allowed_moves is not None else legal_moves_uci(fen)
-    if move_uci not in allowed:
+    if normalized_move not in allowed:
         return False, _error_snapshot_from_fen(
             fen,
-            move_uci,
+            normalized_move,
             "Opponent move not in allowed list",
         )
 

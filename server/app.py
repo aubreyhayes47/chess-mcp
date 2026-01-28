@@ -15,11 +15,17 @@ WIDGET_VERSION = "v1"
 WIDGET_URI = f"ui://widget/chess-board-{WIDGET_VERSION}.html"
 WIDGET_MIME_TYPE = "text/html+skybridge"
 WIDGET_DOMAIN = os.getenv("WIDGET_DOMAIN", "https://chess-mcp.example.com")
+ALLOW_LOCALHOST = os.getenv("WIDGET_ALLOW_LOCALHOST", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+connect_domains = [WIDGET_DOMAIN]
+if ALLOW_LOCALHOST:
+    connect_domains.append("http://localhost:8000")
+
 WIDGET_CSP = {
-    "connect_domains": [
-        WIDGET_DOMAIN,
-        "http://localhost:8000",
-    ],
+    "connect_domains": connect_domains,
     "resource_domains": [],
 }
 WIDGET_BUILD_DIR = Path(__file__).resolve().parents[1] / "web" / "dist"
