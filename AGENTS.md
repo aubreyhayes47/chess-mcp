@@ -19,16 +19,17 @@ Build a minimal ChatGPT Apps SDK app that lets a user play chess inside ChatGPT 
 A change is “done” when all of the following are true:
 
 1. **Widget renders a board** from `window.openai.toolOutput.fen` inside the ChatGPT iframe.
-2. User can **drag/drop** (or click-to-move) a piece.
-3. Widget calls the server tool `apply_move` with `(gameId, fen, moveUci)`.
-4. Widget **updates the board only when** the tool returns `legal: true`.
+2. User **types moves in chat** (no board interaction).
+3. The model calls `apply_move` with `(gameId, fen, moveUci)` based on chat input.
+4. The model renders the updated snapshot via `render_game` (the only tool that returns a widget).
 
-   * If `legal: false`, widget shows the error and does not change the board.
-5. After a legal player move, the widget runs the **opponent turn loop**:
+   * If `legal: false`, the model reports the error and does not change the board.
+5. After a legal player move, the model runs the **opponent turn loop**:
 
    * call `choose_opponent_move(fen)` → obtain `movesUci[]` + policy
    * model selects exactly one UCI move from the list
    * apply it via `apply_move`
+   * render the result via `render_game`
 6. Game over states are rendered correctly (check, checkmate, stalemate).
 7. Works locally and in production behind HTTPS (e.g., Render).
 
@@ -67,13 +68,35 @@ These are hard rules. If your implementation violates them, it is wrong.
 ### 2.6 Avoid brittle turn orchestration
 
 * Do **not** use `window.openai.sendFollowUpMessage` as the core gameplay engine.
-* Use **widget-initiated tool calls** (`window.openai.callTool`) for the turn loop.
+* Use a **single render tool** (`render_game`) per assistant turn; other tools
+  should return structured content only (no widget).
 
 ---
 
 ## 3) Required MCP tool contracts (exact shapes)
 
 Agents must implement **exactly** these tools and these JSON fields.
+
+### 3.0 `render_game` (widget render)
+
+Return a widget-renderable snapshot. This is the **only tool** that sets
+`_meta["openai/outputTemplate"]`.
+
+**Input**
+
+* `snapshot`: object (must include `fen` and `gameId`, plus optional status fields)
+
+**Output (structuredContent)**
+
+```json
+{
+  "type": "chess_snapshot",
+  "gameId": "g_123",
+  "fen": "<FEN>",
+  "status": "in_progress",
+  "turn": "w"
+}
+```
 
 ### 3.1 `new_game`
 
@@ -187,6 +210,9 @@ Tool descriptor metadata must be set correctly (not in tool responses):
 * Tools callable from the widget must set:
 
   * `_meta["openai/widgetAccessible"]: true`
+* Only `render_game` should set:
+
+  * `_meta["openai/outputTemplate"]`
 * Read-only tools must set annotations:
 
   * `annotations.readOnlyHint: true` (for `legal_moves`)
@@ -217,16 +243,18 @@ Tool descriptor metadata must be set correctly (not in tool responses):
 * **UI state (widgetState):** selection, highlights, orientation
 * Do not treat `widgetState.fen` as canonical; it may be empty for new widget instances.
 
-### 6.2 Turn loop (widget-driven)
+### 6.2 Turn loop (chat-driven)
 
-1. User move → call `apply_move`.
-2. If legal → update from tool result.
-3. If game not over → trigger opponent:
+1. User types a move in chat.
+2. Model calls `apply_move`.
+3. If legal → model calls `render_game` with the updated snapshot.
+4. If game not over → trigger opponent:
 
    * call `choose_opponent_move(fen)`
    * model selects one UCI
    * call `apply_move` for opponent move
-4. Render updated snapshot.
+   * call `render_game` to update the widget
+5. Render updated snapshot.
 
 ### 6.3 Move formatting
 
