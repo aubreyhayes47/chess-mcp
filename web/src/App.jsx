@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo } from "react";
 import "./app.css";
 import { useOpenAiGlobal } from "./hooks/useOpenAiGlobal";
-import { useWidgetState } from "./hooks/useWidgetState";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const RANKS = ["8", "7", "6", "5", "4", "3", "2", "1"];
@@ -79,30 +78,6 @@ const getPieceAtSquare = (board, square) => {
   return board[rankIndex]?.[fileIndex] ?? null;
 };
 
-const isPieceForTurn = (piece, turn) => {
-  if (!piece) {
-    return false;
-  }
-  const isWhitePiece = piece === piece.toUpperCase();
-  return turn === "w" ? isWhitePiece : !isWhitePiece;
-};
-
-const buildUciMove = (from, to, piece, turn) => {
-  let uci = `${from}${to}`;
-  if (!piece) {
-    return uci;
-  }
-  const isPawn = piece.toLowerCase() === "p";
-  if (!isPawn) {
-    return uci;
-  }
-  const promotionRank = turn === "w" ? "8" : "1";
-  if (to[1] === promotionRank) {
-    uci += "q";
-  }
-  return uci;
-};
-
 const getStatusLabel = (snapshot) => {
   if (!snapshot) {
     return "No game";
@@ -114,15 +89,6 @@ export default function App() {
   const toolOutput = useOpenAiGlobal("toolOutput");
   const latestPayload = normalizeToolOutput(toolOutput);
   const snapshot = isSnapshotPayload(latestPayload) ? latestPayload : null;
-  const [widgetState, setWidgetState] = useWidgetState({
-    orientation: "white",
-    selectedSquare: null,
-  });
-  const [errorMessage, setErrorMessage] = useState("");
-  const [opponentError, setOpponentError] = useState(false);
-  const [isApplyingMove, setIsApplyingMove] = useState(false);
-  const [isOpponentThinking, setIsOpponentThinking] = useState(false);
-  const newGameRequested = useRef(false);
 
   const isWaitingForTool =
     !isSnapshotPayload(latestPayload) && latestPayload !== null;
@@ -151,191 +117,11 @@ export default function App() {
     [snapshot?.fen]
   );
 
-  const orientation = widgetState.orientation || "white";
+  const orientation = "white";
   const displayFiles =
     orientation === "white" ? FILES : [...FILES].reverse();
   const displayRanks =
     orientation === "white" ? RANKS : [...RANKS].reverse();
-
-  const startNewGame = async () => {
-    setErrorMessage("");
-    setOpponentError(false);
-    setIsOpponentThinking(false);
-    setIsApplyingMove(true);
-    try {
-      if (!window.openai?.callTool) {
-        throw new Error("window.openai.callTool is not available.");
-      }
-      await window.openai.callTool({ name: "new_game", arguments: {} });
-    } catch (error) {
-      setErrorMessage(error?.message || "Failed to start a new game.");
-    } finally {
-      setIsApplyingMove(false);
-    }
-  };
-
-  useEffect(() => {
-    if (snapshot?.fen || newGameRequested.current) {
-      return;
-    }
-    newGameRequested.current = true;
-    void startNewGame();
-  }, [snapshot?.fen]);
-
-  const updateWidgetState = (updates) => {
-    setWidgetState((current) => ({ ...current, ...updates }));
-  };
-
-  const clearSelection = () => {
-    updateWidgetState({ selectedSquare: null });
-  };
-
-  const handleOpponentTurn = async (currentFen, gameId) => {
-    setIsOpponentThinking(true);
-    setErrorMessage("");
-    setOpponentError(false);
-    try {
-      if (!window.openai?.callTool) {
-        throw new Error("window.openai.callTool is not available.");
-      }
-      const opponentChoice = await window.openai.callTool({
-        name: "choose_opponent_move",
-        arguments: { fen: currentFen },
-      });
-      const opponentPayload = normalizeToolOutput(opponentChoice);
-      const moves = opponentPayload?.movesUci || [];
-      if (!moves.length) {
-        setErrorMessage(
-          opponentPayload?.error ||
-            "Opponent has no legal moves. The game may be over."
-        );
-        setOpponentError(true);
-        return;
-      }
-
-      if (typeof window.openai?.selectMoveFromList !== "function") {
-        setErrorMessage(
-          "LLM move selection is unavailable. Unable to choose an opponent move."
-        );
-        setOpponentError(true);
-        return;
-      }
-
-      const selectedMove = await window.openai.selectMoveFromList(moves);
-      if (!selectedMove) {
-        setErrorMessage("Opponent did not select a move.");
-        setOpponentError(true);
-        return;
-      }
-
-      if (!moves.includes(selectedMove)) {
-        setErrorMessage(
-          "Opponent move selection was invalid. Please retry the opponent move."
-        );
-        setOpponentError(true);
-        return;
-      }
-
-      const opponentResult = await window.openai.callTool({
-        name: "apply_move",
-        arguments: {
-          gameId,
-          fen: currentFen,
-          moveUci: selectedMove,
-        },
-      });
-      const opponentSnapshot = normalizeToolOutput(opponentResult);
-      if (opponentSnapshot?.legal === false) {
-        setErrorMessage(opponentSnapshot?.error || "Opponent move was illegal.");
-        setOpponentError(true);
-      }
-    } catch (error) {
-      setErrorMessage(
-        error?.message || "Failed to compute opponent move. Please retry."
-      );
-      setOpponentError(true);
-    } finally {
-      setIsOpponentThinking(false);
-    }
-  };
-
-  const handleSquareClick = async (square) => {
-    if (!snapshot?.fen || !snapshot?.gameId) {
-      return;
-    }
-    if (isApplyingMove || isOpponentThinking) {
-      return;
-    }
-    const selectedSquare = widgetState.selectedSquare;
-    const pieceAtSquare = getPieceAtSquare(board, square);
-
-    if (!selectedSquare) {
-      if (!pieceAtSquare || !isPieceForTurn(pieceAtSquare, snapshot.turn)) {
-        return;
-      }
-      updateWidgetState({ selectedSquare: square });
-      return;
-    }
-
-    if (selectedSquare === square) {
-      clearSelection();
-      return;
-    }
-
-    const movingPiece = getPieceAtSquare(board, selectedSquare);
-    const moveUci = buildUciMove(
-      selectedSquare,
-      square,
-      movingPiece,
-      snapshot.turn
-    );
-    clearSelection();
-    setIsApplyingMove(true);
-    setErrorMessage("");
-    setOpponentError(false);
-    try {
-      if (!window.openai?.callTool) {
-        throw new Error("window.openai.callTool is not available.");
-      }
-      const result = await window.openai.callTool({
-        name: "apply_move",
-        arguments: {
-          gameId: snapshot.gameId,
-          fen: snapshot.fen,
-          moveUci,
-        },
-      });
-      const resultSnapshot = normalizeToolOutput(result);
-      if (resultSnapshot?.legal === false) {
-        setErrorMessage(resultSnapshot?.error || "Illegal move.");
-        setOpponentError(false);
-        return;
-      }
-      const shouldOpponentMove =
-        resultSnapshot &&
-        !["checkmate", "stalemate"].includes(resultSnapshot.status);
-      if (shouldOpponentMove) {
-        await handleOpponentTurn(resultSnapshot?.fen, resultSnapshot?.gameId);
-      }
-    } catch (error) {
-      setErrorMessage(error?.message || "Failed to apply move.");
-    } finally {
-      setIsApplyingMove(false);
-    }
-  };
-
-  const handleRetryOpponent = async () => {
-    if (!snapshot?.fen || !snapshot?.gameId) {
-      return;
-    }
-    await handleOpponentTurn(snapshot.fen, snapshot.gameId);
-  };
-
-  const flipBoard = () => {
-    updateWidgetState({
-      orientation: orientation === "white" ? "black" : "white",
-    });
-  };
 
   return (
     <main className="app">
@@ -343,21 +129,9 @@ export default function App() {
         <div>
           <h1>Chess MCP</h1>
           <p className="app__subtitle">
-            Play a legal move. The server confirms every move before the board
-            updates.
+            Type your move in chat. The board updates only from verified tool
+            results.
           </p>
-        </div>
-        <div className="app__actions">
-          <button
-            className="button"
-            onClick={startNewGame}
-            disabled={isApplyingMove || isOpponentThinking}
-          >
-            New Game
-          </button>
-          <button className="button button--secondary" onClick={flipBoard}>
-            Flip Board
-          </button>
         </div>
       </header>
 
@@ -377,25 +151,10 @@ export default function App() {
         </div>
       </section>
 
-      {errorMessage ? (
-        <div className="alert">
-          <span>{errorMessage}</span>
-          <button
-            className="link"
-            onClick={() => {
-              setErrorMessage("");
-              setOpponentError(false);
-            }}
-          >
-            OK
-          </button>
-        </div>
-      ) : null}
-
       <section className="board-wrapper">
         {isWaitingForTool ? (
           <div className="board board--waiting" role="status">
-            <p>Your opponent is thinking...</p>
+            <p>Waiting for the next tool update...</p>
           </div>
         ) : (
           <div className="board" role="grid" aria-label="Chess board">
@@ -404,15 +163,13 @@ export default function App() {
                 const square = `${file}${rank}`;
                 const piece = getPieceAtSquare(board, square);
                 const isDark = (rankIndex + fileIndex) % 2 === 1;
-                const isSelected = widgetState.selectedSquare === square;
                 return (
-                  <button
+                  <div
                     key={square}
-                    type="button"
                     className={`square ${
                       isDark ? "square--dark" : "square--light"
-                    } ${isSelected ? "square--selected" : ""}`}
-                    onClick={() => handleSquareClick(square)}
+                    }`}
+                    role="gridcell"
                     aria-label={`Square ${square}`}
                   >
                     <span className="piece">{piece ? PIECES[piece] : ""}</span>
@@ -420,29 +177,21 @@ export default function App() {
                       {fileIndex === 0 ? rank : ""}
                       {rankIndex === 7 ? file : ""}
                     </span>
-                  </button>
+                  </div>
                 );
               })
             )}
           </div>
         )}
         <div className="board-meta">
-          {isApplyingMove ? "Applying move..." : null}
-          {isOpponentThinking ? "Opponent thinking..." : null}
-          {!isApplyingMove && !isOpponentThinking ? (
-            <span>Click a piece, then a destination square.</span>
-          ) : null}
+          <span>Type your move in chat (UCI like e2e4 or SAN like Nf3).</span>
           <p className="board-note">
-            Promotions default to queen for now. TODO: add a promotion picker.
+            For promotions, include the piece letter (e.g., e7e8q).
           </p>
-          {opponentError ? (
-            <button
-              className="button button--secondary"
-              onClick={handleRetryOpponent}
-            >
-              Retry opponent move
-            </button>
-          ) : null}
+          <p className="board-note">
+            Need the opponent to retry? Ask in chat and the model will rerun the
+            opponent turn loop.
+          </p>
         </div>
       </section>
     </main>

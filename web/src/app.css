@@ -12,10 +12,6 @@ body {
   background: #f5f7fa;
 }
 
-button {
-  font: inherit;
-}
-
 .app {
   padding: 24px;
   display: flex;
@@ -36,31 +32,6 @@ button {
   color: #52616b;
 }
 
-.app__actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.button {
-  background: #1f7aec;
-  color: #fff;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.button--secondary {
-  background: #e0e7ff;
-  color: #1f2933;
-}
-
 .status {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -69,26 +40,6 @@ button {
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(31, 41, 51, 0.08);
-}
-
-.alert {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #fdecea;
-  color: #611a15;
-}
-
-.link {
-  background: none;
-  border: none;
-  color: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
 }
 
 .board-wrapper {
@@ -134,7 +85,7 @@ button {
   align-items: center;
   justify-content: center;
   font-size: clamp(20px, 4vw, 36px);
-  cursor: pointer;
+  cursor: default;
 }
 
 .square--light {
@@ -143,11 +94,6 @@ button {
 
 .square--dark {
   background: #b58863;
-}
-
-.square--selected {
-  outline: 3px solid #1f7aec;
-  z-index: 1;
 }
 
 .square .piece {

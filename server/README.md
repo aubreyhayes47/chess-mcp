@@ -42,7 +42,8 @@ export WIDGET_ALLOW_LOCALHOST=true
 
 ## Example tool calls
 
-Use MCP Inspector (or any MCP client) to call the tools with these sample inputs:
+Use MCP Inspector (or any MCP client) to call the tools with these sample inputs.
+In production, the model calls these tools in response to user chat input.
 
 ```json
 // new_game
@@ -106,8 +107,8 @@ orchestrator should call `choose_opponent_move` again to request a valid move.
 ## Manual test checklist
 
 - Start the server and open MCP Inspector.
-- Call `new_game`.
-- Call `legal_moves` with the returned `fen`.
+- Call `new_game` (the model would do this when a user asks to start).
+- Call `legal_moves` with the returned `fen` to mirror how the model disambiguates chat input.
 - Call `apply_move` with a legal move (e.g., `e2e4` from the starting position).
 - Call `apply_move` with an illegal move (e.g., `e2e5` from the starting position).
 - Call `choose_opponent_move` with the current `fen` and confirm it returns moves + policy.

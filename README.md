@@ -1,6 +1,6 @@
 # chess-mcp
 
-A minimal, **capability-first** ChatGPT App that lets users play chess inside ChatGPT with an interactive board, **authoritative rule enforcement**, and an optional LLM opponent.
+A minimal, **capability-first** ChatGPT App that lets users play chess inside ChatGPT with a display-only board, **authoritative rule enforcement**, and an optional LLM opponent.
 
 > Core contract: **(state, moveUci) → new_state**
 >
@@ -12,7 +12,7 @@ A minimal, **capability-first** ChatGPT App that lets users play chess inside Ch
 ## Goals
 
 * **Do:** Apply legal chess moves, advance turns, and keep the game consistent.
-* **Show:** Render an interactive chessboard UI (drag/drop or click-to-move) inside ChatGPT.
+* **Show:** Render a display-only chessboard UI inside ChatGPT.
 * **(Optional) Know:** Provide explanations, hints, or analysis without making the UI/logic fragile.
 
 Non-goals (v1): full lichess-style analysis suite, accounts, matchmaking, opening explorer, etc.
@@ -26,9 +26,9 @@ Non-goals (v1): full lichess-style analysis suite, accounts, matchmaking, openin
 1. **Widget UI (React)**
 
    * Runs inside ChatGPT as an iframe via `text/html+skybridge`.
-   * Renders the board from `window.openai.toolOutput`.
-   * Initiates tool calls via `window.openai.callTool(...)` (tools must be `widgetAccessible`).
-   * Persists UI-only settings (flip board, highlights, selection) via `window.openai.setWidgetState(...)`.
+   * Renders the board and status from `window.openai.toolOutput`.
+   * Provides chat-only instructions; the model drives all tool calls.
+   * Avoids move input controls so the widget remains display-only.
 
 2. **MCP Server (Python)**
 
@@ -193,32 +193,27 @@ Atomic “player move then opponent move” to minimize round trips.
 
 ### Responsibilities
 
-* Render chessboard from `toolOutput.fen`.
-* Capture user moves and convert to UCI.
-* Call tools and update UI only from tool-confirmed results.
-* Persist **UI state** only (recommended):
-
-  * board orientation
-  * selected square
-  * highlight toggles
+* Render chessboard and status from `toolOutput.fen`.
+* Provide chat-first instructions so users type moves in the conversation.
+* Avoid local move input and rely on tool-confirmed updates.
 
 ### State Placement
 
 * **Business data (truth):** MCP server / tool outputs (`fen`, `status`, `history`)
-* **UI state (ephemeral):** `window.openai.widgetState`
+* **UI state (ephemeral):** optional, for display-only preferences
 * **Cross-session preferences (optional):** your backend DB
 
 ### React runtime integration
 
-Use `useOpenAiGlobal("toolOutput")` and `useWidgetState(...)` helpers to keep reactive.
+Use `useOpenAiGlobal("toolOutput")` to keep the widget reactive.
 
 ### UI manual test checklist
 
 * Build the widget bundle: `cd web && npm install && npm run build`.
-* Start a new game (auto on load or via **New Game** button).
-* Make a legal move and confirm the board updates only after tool confirmation.
-* Attempt an illegal move and confirm an error appears with no board change.
-* After a legal move, confirm the opponent move appears after the loading state.
+* Start a new game via chat (model calls `new_game`).
+* Type a legal move in chat and confirm the board updates only after tool confirmation.
+* Type an illegal move in chat and confirm the model reports the error with no board change.
+* After a legal move, confirm the opponent move appears after the model runs the opponent loop.
 * Reach a game end state (checkmate/stalemate/check) and confirm status renders.
 
 ### Local E2E (Playwright)
@@ -247,15 +242,22 @@ Notes:
 
 ## Turn Loop
 
-1. User makes a move in the widget.
-2. Widget calls `apply_move({ gameId, fen, moveUci })`.
-3. If illegal → show error.
-4. If legal → render new `fen`.
-5. Opponent step (choose one):
+1. User types a move in chat.
+2. Model parses input into UCI (or uses `legal_moves` to disambiguate).
+3. Model calls `apply_move({ gameId, fen, moveUci })`.
+4. If illegal → model reports error.
+5. If legal → render new `fen`.
+6. Opponent step (choose one):
 
    * **LLM opponent:** call `choose_opponent_move(fen)` then `apply_move`.
    * **Engine opponent:** call `get_best_move(fen)` then `apply_move`.
-6. Render updated snapshot, checkmate/stalemate if reached.
+7. Render updated snapshot, checkmate/stalemate if reached.
+
+## Chat-driven move parsing
+
+* The model should parse user input into UCI moves.
+* If the input is ambiguous or invalid, call `legal_moves` and ask for clarification.
+* Always call `apply_move` to validate and update FEN (no optimistic updates).
 
 ---
 
@@ -271,10 +273,9 @@ chess-mcp/
       chess-board-v1.html  # text/html+skybridge wrapper
   web/
     src/
-      App.tsx              # React widget
+      App.jsx              # React widget
       hooks/
-        useOpenAiGlobal.ts
-        useWidgetState.ts
+        useOpenAiGlobal.js
     dist/
       widget.js            # bundled JS (inlined into template)
       widget.css           # bundled CSS (inlined into template)
