@@ -113,6 +113,18 @@ button {
   background: #1f2933;
 }
 
+.board--waiting {
+  grid-template-columns: 1fr;
+  min-height: 320px;
+  place-items: center;
+  color: #f8fafc;
+  font-size: 18px;
+}
+
+.board--waiting p {
+  margin: 0;
+}
+
 .square {
   position: relative;
   width: 100%;

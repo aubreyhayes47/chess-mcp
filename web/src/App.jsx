@@ -113,11 +113,7 @@ const getStatusLabel = (snapshot) => {
 export default function App() {
   const toolOutput = useOpenAiGlobal("toolOutput");
   const latestPayload = normalizeToolOutput(toolOutput);
-  const [lastSnapshot, setLastSnapshot] = useState(null);
-  const snapshot =
-    isSnapshotPayload(latestPayload) && latestPayload?.legal !== false
-      ? latestPayload
-      : lastSnapshot;
+  const snapshot = isSnapshotPayload(latestPayload) ? latestPayload : null;
   const [widgetState, setWidgetState] = useWidgetState({
     orientation: "white",
     selectedSquare: null,
@@ -128,11 +124,8 @@ export default function App() {
   const [isOpponentThinking, setIsOpponentThinking] = useState(false);
   const newGameRequested = useRef(false);
 
-  useEffect(() => {
-    if (isSnapshotPayload(latestPayload) && latestPayload?.legal !== false) {
-      setLastSnapshot(latestPayload);
-    }
-  }, [latestPayload]);
+  const isWaitingForTool =
+    !isSnapshotPayload(latestPayload) && latestPayload !== null;
 
   useEffect(() => {
     const handleError = (event) => {
@@ -400,33 +393,39 @@ export default function App() {
       ) : null}
 
       <section className="board-wrapper">
-        <div className="board" role="grid" aria-label="Chess board">
-          {displayRanks.map((rank, rankIndex) =>
-            displayFiles.map((file, fileIndex) => {
-              const square = `${file}${rank}`;
-              const piece = getPieceAtSquare(board, square);
-              const isDark = (rankIndex + fileIndex) % 2 === 1;
-              const isSelected = widgetState.selectedSquare === square;
-              return (
-                <button
-                  key={square}
-                  type="button"
-                  className={`square ${isDark ? "square--dark" : "square--light"} ${
-                    isSelected ? "square--selected" : ""
-                  }`}
-                  onClick={() => handleSquareClick(square)}
-                  aria-label={`Square ${square}`}
-                >
-                  <span className="piece">{piece ? PIECES[piece] : ""}</span>
-                  <span className="coord">
-                    {fileIndex === 0 ? rank : ""}
-                    {rankIndex === 7 ? file : ""}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
+        {isWaitingForTool ? (
+          <div className="board board--waiting" role="status">
+            <p>Your opponent is thinking...</p>
+          </div>
+        ) : (
+          <div className="board" role="grid" aria-label="Chess board">
+            {displayRanks.map((rank, rankIndex) =>
+              displayFiles.map((file, fileIndex) => {
+                const square = `${file}${rank}`;
+                const piece = getPieceAtSquare(board, square);
+                const isDark = (rankIndex + fileIndex) % 2 === 1;
+                const isSelected = widgetState.selectedSquare === square;
+                return (
+                  <button
+                    key={square}
+                    type="button"
+                    className={`square ${
+                      isDark ? "square--dark" : "square--light"
+                    } ${isSelected ? "square--selected" : ""}`}
+                    onClick={() => handleSquareClick(square)}
+                    aria-label={`Square ${square}`}
+                  >
+                    <span className="piece">{piece ? PIECES[piece] : ""}</span>
+                    <span className="coord">
+                      {fileIndex === 0 ? rank : ""}
+                      {rankIndex === 7 ? file : ""}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
         <div className="board-meta">
           {isApplyingMove ? "Applying move..." : null}
           {isOpponentThinking ? "Opponent thinking..." : null}
