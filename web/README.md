@@ -1,7 +1,8 @@
 # chess-mcp widget (scaffold)
 
-This directory contains the React + Vite widget scaffold. No chess behavior
-is implemented yet.
+This directory contains the React + Vite widget for the chess MCP app. The
+widget renders the board from `window.openai.toolOutput`, calls server tools to
+apply moves, and drives the opponent turn loop.
 
 ## Local development
 
@@ -19,5 +20,5 @@ npm run build
 
 ## Notes
 
-- The widget will later read from `window.openai.toolOutput`.
-- The build output will be embedded into the server template.
+- The widget reads from `window.openai.toolOutput`.
+- The build output is embedded into the server template.

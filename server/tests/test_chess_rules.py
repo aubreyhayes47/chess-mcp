@@ -57,6 +57,14 @@ def test_apply_uci_move_checkmate():
     assert result["status"] == "checkmate"
 
 
+def test_apply_uci_move_check():
+    fen = "4k3/8/8/8/8/8/4Q3/4K3 w - - 0 1"
+    result = apply_uci_move(fen, "e2e7")
+    assert result["legal"] is True
+    assert result["status"] == "check"
+    assert result["check"] is True
+
+
 def test_legal_moves_uci_starting_position():
     moves = legal_moves_uci(chess.STARTING_FEN)
     assert moves
