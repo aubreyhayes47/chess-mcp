@@ -2,9 +2,9 @@
 
 A minimal, **capability-first** ChatGPT App that lets users play chess inside ChatGPT with an interactive board, **authoritative rule enforcement**, and an optional LLM opponent.
 
-> Core contract: **(state, move) → new_state**
+> Core contract: **(state, moveUci) → new_state**
 >
-> * **Input:** `fen` (board state) + `move` (UCI or SAN)
+> * **Input:** `fen` (board state) + `moveUci` (UCI)
 > * **Output:** `fen` (updated board state) + game status
 
 ---
@@ -99,7 +99,7 @@ Validate and apply a single move.
 
 * `gameId`
 * `fen`
-* `move` (string): UCI preferred (`e2e4`, `e7e8q`), SAN optional
+* `moveUci` (string): UCI (`e2e4`, `e7e8q`)
 
 **Output (structuredContent)**
 
@@ -170,7 +170,7 @@ Select an opponent move by constraining the model to a legal-move list.
 
 **Server-side safety**
 
-* Even after model selection, the server must re-validate by calling `apply_move(fen, move)`.
+* Even after model selection, the server must re-validate by calling `apply_move(fen, moveUci)`.
 * If the model outputs an illegal move, re-run `choose_opponent_move` with a stricter instruction and/or reduce the candidate list.
 
 ### Tool: `play_turn` (optional convenience)
@@ -226,7 +226,7 @@ Use `useOpenAiGlobal("toolOutput")` and `useWidgetState(...)` helpers to keep re
 ## Turn Loop
 
 1. User makes a move in the widget.
-2. Widget calls `apply_move({ gameId, fen, move })`.
+2. Widget calls `apply_move({ gameId, fen, moveUci })`.
 3. If illegal → show error.
 4. If legal → render new `fen`.
 5. Opponent step (choose one):
@@ -323,7 +323,7 @@ When you make breaking widget changes, bump the version in `server/app.py`:
 * Never return secrets in `structuredContent`, `content`, `_meta`, or widgetState.
 * Mark read-only tools with `annotations.readOnlyHint: true`.
 * Keep `structuredContent` small; put bulky data in `_meta`.
-* Treat `(fen, move)` as a deterministic transition for idempotency.
+* Treat `(fen, moveUci)` as a deterministic transition for idempotency.
 
 ---
 

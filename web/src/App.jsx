@@ -109,7 +109,12 @@ const getStatusLabel = (snapshot) => {
 
 export default function App() {
   const toolOutput = useOpenAiGlobal("toolOutput");
-  const snapshot = normalizeToolOutput(toolOutput);
+  const latestPayload = normalizeToolOutput(toolOutput);
+  const [lastSnapshot, setLastSnapshot] = useState(null);
+  const snapshot =
+    latestPayload?.type === "chess_snapshot" && latestPayload?.legal !== false
+      ? latestPayload
+      : lastSnapshot;
   const [widgetState, setWidgetState] = useWidgetState({
     orientation: "white",
     selectedSquare: null,
@@ -119,6 +124,15 @@ export default function App() {
   const [isApplyingMove, setIsApplyingMove] = useState(false);
   const [isOpponentThinking, setIsOpponentThinking] = useState(false);
   const newGameRequested = useRef(false);
+
+  useEffect(() => {
+    if (
+      latestPayload?.type === "chess_snapshot" &&
+      latestPayload?.legal !== false
+    ) {
+      setLastSnapshot(latestPayload);
+    }
+  }, [latestPayload]);
 
   const board = useMemo(
     () => parseFenBoard(snapshot?.fen),
@@ -189,12 +203,19 @@ export default function App() {
         return;
       }
 
-      let selectedMove = null;
-      if (typeof window.openai?.selectMoveFromList === "function") {
-        selectedMove = await window.openai.selectMoveFromList(moves);
+      if (typeof window.openai?.selectMoveFromList !== "function") {
+        setErrorMessage(
+          "LLM move selection is unavailable. Unable to choose an opponent move."
+        );
+        setOpponentError(true);
+        return;
       }
+
+      const selectedMove = await window.openai.selectMoveFromList(moves);
       if (!selectedMove) {
-        selectedMove = moves[0];
+        setErrorMessage("Opponent did not select a move.");
+        setOpponentError(true);
+        return;
       }
 
       if (!moves.includes(selectedMove)) {
