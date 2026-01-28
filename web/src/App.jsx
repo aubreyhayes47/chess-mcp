@@ -37,6 +37,9 @@ const normalizeToolOutput = (toolOutput) => {
   return toolOutput;
 };
 
+const isSnapshotPayload = (payload) =>
+  payload?.type === "chess_snapshot" && typeof payload?.fen === "string";
+
 const parseFenBoard = (fen) => {
   if (!fen) {
     return Array.from({ length: 8 }, () => Array(8).fill(null));
@@ -112,7 +115,7 @@ export default function App() {
   const latestPayload = normalizeToolOutput(toolOutput);
   const [lastSnapshot, setLastSnapshot] = useState(null);
   const snapshot =
-    latestPayload?.type === "chess_snapshot" && latestPayload?.legal !== false
+    isSnapshotPayload(latestPayload) && latestPayload?.legal !== false
       ? latestPayload
       : lastSnapshot;
   const [widgetState, setWidgetState] = useWidgetState({
@@ -126,13 +129,29 @@ export default function App() {
   const newGameRequested = useRef(false);
 
   useEffect(() => {
-    if (
-      latestPayload?.type === "chess_snapshot" &&
-      latestPayload?.legal !== false
-    ) {
+    if (isSnapshotPayload(latestPayload) && latestPayload?.legal !== false) {
       setLastSnapshot(latestPayload);
     }
   }, [latestPayload]);
+
+  useEffect(() => {
+    const handleError = (event) => {
+      const message = event?.error?.message || event?.message || "Unknown error";
+      // eslint-disable-next-line no-console
+      console.error("Widget runtime error:", message, event?.error || event);
+    };
+    const handleRejection = (event) => {
+      const reason = event?.reason;
+      // eslint-disable-next-line no-console
+      console.error("Widget unhandled rejection:", reason || event);
+    };
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => {
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleRejection);
+    };
+  }, []);
 
   const board = useMemo(
     () => parseFenBoard(snapshot?.fen),
@@ -146,16 +165,15 @@ export default function App() {
     orientation === "white" ? RANKS : [...RANKS].reverse();
 
   const startNewGame = async () => {
-    if (!window.openai?.callTool) {
-      setErrorMessage("window.openai.callTool is not available.");
-      return;
-    }
     setErrorMessage("");
     setOpponentError(false);
     setIsOpponentThinking(false);
     setIsApplyingMove(true);
     try {
-      await window.openai.callTool({ name: "new_game", input: {} });
+      if (!window.openai?.callTool) {
+        throw new Error("window.openai.callTool is not available.");
+      }
+      await window.openai.callTool({ name: "new_game", arguments: {} });
     } catch (error) {
       setErrorMessage(error?.message || "Failed to start a new game.");
     } finally {
@@ -180,17 +198,16 @@ export default function App() {
   };
 
   const handleOpponentTurn = async (currentFen, gameId) => {
-    if (!window.openai?.callTool) {
-      setErrorMessage("window.openai.callTool is not available.");
-      return;
-    }
     setIsOpponentThinking(true);
     setErrorMessage("");
     setOpponentError(false);
     try {
+      if (!window.openai?.callTool) {
+        throw new Error("window.openai.callTool is not available.");
+      }
       const opponentChoice = await window.openai.callTool({
         name: "choose_opponent_move",
-        input: { fen: currentFen },
+        arguments: { fen: currentFen },
       });
       const opponentPayload = normalizeToolOutput(opponentChoice);
       const moves = opponentPayload?.movesUci || [];
@@ -228,7 +245,7 @@ export default function App() {
 
       const opponentResult = await window.openai.callTool({
         name: "apply_move",
-        input: {
+        arguments: {
           gameId,
           fen: currentFen,
           moveUci: selectedMove,
@@ -284,9 +301,12 @@ export default function App() {
     setErrorMessage("");
     setOpponentError(false);
     try {
+      if (!window.openai?.callTool) {
+        throw new Error("window.openai.callTool is not available.");
+      }
       const result = await window.openai.callTool({
         name: "apply_move",
-        input: {
+        arguments: {
           gameId: snapshot.gameId,
           fen: snapshot.fen,
           moveUci,
