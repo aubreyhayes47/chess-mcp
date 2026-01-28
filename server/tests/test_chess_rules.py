@@ -65,6 +65,19 @@ def test_apply_uci_move_check():
     assert result["check"] is True
 
 
+def test_apply_uci_move_rejects_long_fen():
+    long_fen = f"{'8/' * 100} w - - 0 1"
+    result = apply_uci_move(long_fen, "e2e4")
+    assert result["legal"] is False
+    assert "Invalid FEN" in result["error"]
+
+
+def test_apply_uci_move_rejects_invalid_uci():
+    result = apply_uci_move(chess.STARTING_FEN, "e2e4e5")
+    assert result["legal"] is False
+    assert result["error"] == "Invalid move format"
+
+
 def test_legal_moves_uci_starting_position():
     moves = legal_moves_uci(chess.STARTING_FEN)
     assert moves
