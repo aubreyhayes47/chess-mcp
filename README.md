@@ -221,6 +221,28 @@ Use `useOpenAiGlobal("toolOutput")` and `useWidgetState(...)` helpers to keep re
 * After a legal move, confirm the opponent move appears after the loading state.
 * Reach a game end state (checkmate/stalemate/check) and confirm status renders.
 
+### Local E2E (Playwright)
+
+This runs the widget against the real MCP server using a local MCP client
+bridge (no ChatGPT required), using Playwright's Python package.
+
+Prereqs:
+
+* Python deps: `./.venv/bin/pip install -e server`
+* Playwright (Python): `./.venv/bin/pip install -r e2e/requirements.txt`
+* Playwright browsers: `./.venv/bin/python -m playwright install --with-deps`
+
+Run:
+
+```bash
+./.venv/bin/pytest e2e/test_widget_e2e.py
+```
+
+Notes:
+
+* The test runner builds the widget and starts the MCP server automatically.
+* Server runs on `http://127.0.0.1:8000/mcp` via `server/run_http.py`.
+
 ---
 
 ## Turn Loop

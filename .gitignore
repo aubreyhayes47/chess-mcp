@@ -1,2 +1,4 @@
 node_modules/
 web/node_modules/
+e2e/.mcp-server.pid
+e2e/.pytest_cache/
