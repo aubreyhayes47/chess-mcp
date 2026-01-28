@@ -15,8 +15,14 @@ WIDGET_TEMPLATE_URI = "ui://widget/chess-board-v1.html"
 OPPONENT_MOVE_CAP = 200
 
 
-def _tool_meta(widget_accessible: bool = False) -> dict[str, object]:
-    meta: dict[str, object] = {"openai/outputTemplate": WIDGET_TEMPLATE_URI}
+def _tool_meta(
+    *,
+    include_output_template: bool = False,
+    widget_accessible: bool = False,
+) -> dict[str, object]:
+    meta: dict[str, object] = {}
+    if include_output_template:
+        meta["openai/outputTemplate"] = WIDGET_TEMPLATE_URI
     if widget_accessible:
         meta["openai/widgetAccessible"] = True
     return meta
@@ -24,6 +30,27 @@ def _tool_meta(widget_accessible: bool = False) -> dict[str, object]:
 
 def register_tools(app: FastMCP) -> None:
     """Register MCP tools on the provided FastMCP app instance."""
+
+    @app.tool(
+        name="render_game",
+        description="Render the chess widget for the provided snapshot.",
+        meta=_tool_meta(include_output_template=True),
+    )
+    def render_game(snapshot: dict) -> ToolResult:
+        if not isinstance(snapshot, dict):
+            payload = {
+                "type": "chess_snapshot",
+                "gameId": "unknown",
+                "fen": "",
+                "status": "in_progress",
+                "turn": "w",
+                "legal": False,
+                "error": "Invalid snapshot payload.",
+            }
+            return ToolResult(content=[], structured_content=payload)
+        snapshot_payload = {**snapshot}
+        snapshot_payload.setdefault("type", "chess_snapshot")
+        return ToolResult(content=[], structured_content=snapshot_payload)
 
     @app.tool(
         name="new_game",

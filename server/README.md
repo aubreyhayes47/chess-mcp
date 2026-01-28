@@ -43,12 +43,26 @@ export WIDGET_ALLOW_LOCALHOST=true
 ## Example tool calls
 
 Use MCP Inspector (or any MCP client) to call the tools with these sample inputs.
-In production, the model calls these tools in response to user chat input.
+In production, the model calls these tools in response to user chat input and
+uses `render_game` as the only widget-rendering tool.
 
 ```json
 // new_game
 {
   "side": "white"
+}
+```
+
+```json
+// render_game
+{
+  "snapshot": {
+    "type": "chess_snapshot",
+    "gameId": "g_example",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "status": "in_progress",
+    "turn": "w"
+  }
 }
 ```
 
@@ -112,6 +126,7 @@ orchestrator should call `choose_opponent_move` again to request a valid move.
 - Call `apply_move` with a legal move (e.g., `e2e4` from the starting position).
 - Call `apply_move` with an illegal move (e.g., `e2e5` from the starting position).
 - Call `choose_opponent_move` with the current `fen` and confirm it returns moves + policy.
+- Call `render_game` with the latest snapshot to render the widget output.
 
 ## Notes
 

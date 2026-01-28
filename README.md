@@ -70,6 +70,28 @@ Design principles:
 * **Idempotent**: tools may be retried by the model/runtime.
 * **Small structuredContent**: only what the model should see.
 * **UI-only bulk in _meta**: legal-move lists, long history, etc.
+* **Single widget render**: only `render_game` returns the widget template.
+
+### Tool: `render_game`
+
+Render a widget snapshot. This is the **only tool** that sets
+`openai/outputTemplate`.
+
+**Input**
+
+* `snapshot`: object (must include `fen` and `gameId`, plus optional status fields)
+
+**Output (structuredContent)**
+
+```json
+{
+  "type": "chess_snapshot",
+  "gameId": "g_123",
+  "fen": "...",
+  "status": "in_progress",
+  "turn": "w"
+}
+```
 
 ### Tool: `new_game`
 
@@ -211,7 +233,7 @@ Use `useOpenAiGlobal("toolOutput")` to keep the widget reactive.
 
 * Build the widget bundle: `cd web && npm install && npm run build`.
 * Start a new game via chat (model calls `new_game`).
-* Type a legal move in chat and confirm the board updates only after tool confirmation.
+* Type a legal move in chat and confirm the model renders the update via `render_game`.
 * Type an illegal move in chat and confirm the model reports the error with no board change.
 * After a legal move, confirm the opponent move appears after the model runs the opponent loop.
 * Reach a game end state (checkmate/stalemate/check) and confirm status renders.
@@ -246,12 +268,12 @@ Notes:
 2. Model parses input into UCI (or uses `legal_moves` to disambiguate).
 3. Model calls `apply_move({ gameId, fen, moveUci })`.
 4. If illegal → model reports error.
-5. If legal → render new `fen`.
+5. If legal → model calls `render_game` to render the new snapshot.
 6. Opponent step (choose one):
 
    * **LLM opponent:** call `choose_opponent_move(fen)` then `apply_move`.
    * **Engine opponent:** call `get_best_move(fen)` then `apply_move`.
-7. Render updated snapshot, checkmate/stalemate if reached.
+7. Render updated snapshot with `render_game`, checkmate/stalemate if reached.
 
 ## Chat-driven move parsing
 
